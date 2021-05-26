@@ -6,10 +6,10 @@
 
 **Abstract** 
 
-- Members of the general public assess risks of climate change differently than experts.
+> Members of the general public assess risks of climate change differently than experts.
 Increasing the perceived risk through communication of climate change has been debated as a viable strategy to promote more sustainable behavior. This thesis exposes 412 subjects to four different messages regarding varying the likelihood and severity of averse consequences of global warming. Two-factorial analysis indicates no adjustment in perceived risk as the result of treatment conditions. Perceived risk is, however, found to be a stable and important factor in explaining observed pro-climate behavior. The study also tests the influence of general interpersonal trust on collaboration in climate change mitigation efforts. Unlike perceived risk, this factor may only affect action of people with lower knowledge of climate change.
 
-If you have participated in the project and want to see the code used for the lottery, please check out the [Jupyter Notbook, here.] ([https://github.com/phkreutzer/climate-change-risk/blob/master/scripts/lottery.ipynb](https://github.com/phkreutzer/climate-change-risk/blob/master/scripts/lottery.ipynb)) Thank you for participating!
+If you have participated in the project and want to see the code used for the lottery, please check out the [Jupyter Notbook, here.] (./scripts/lottery.ipynb) Thank you for participating!
 
 This repository makes the data and code used in the thesis available. 
 
