@@ -1,4 +1,5 @@
 library(tidyverse)
+library(broom)
 library(psych)
 library(car)
 library(stargazer)
@@ -8,7 +9,7 @@ library(tikzDevice)
 # Prepare data ------------------------------------------------------------
 full_sample <- data 
 earth_day_sample <- full_sample %>% filter(started < '2021-04-22')
-earth_day_sample
+
 
 quantile(full_sample$quiz_score)
 low_ocsi_sample <- full_sample %>% filter(quiz_score < 5)
@@ -17,7 +18,7 @@ samples <- list(full_sample, earth_day_sample, low_ocsi_sample)
 names(samples) <-  c("full_sample",  "earth_day", "ocsi")
 
 
-# Group Means -------------------------------------------------------------
+# Group Means Risk -------------------------------------------------------------
 
 #Total perceived risk
 risk_total_means <- lapply(samples,
@@ -30,7 +31,6 @@ risk_total_means <- lapply(samples,
 )
 
 risk_total_means_out <- as.data.frame(risk_total_means)
-
 #Risk for self
 risk_self_means <- lapply(samples,
                           function(sample) group_by(sample, treatment_group)%>%
@@ -59,14 +59,15 @@ risk_means_out <- rbind(risk_total_means_out, risk_other_means_out, risk_self_me
 risk_means_out <-  subset(risk_means_out, select = -c(5,9) )
 
 stargazer(risk_means_out,
-          label="tab:risk_means_comparison",
-          summary=FALSE,
-          header=FALSE,
+          label = "tab:risk_means_comparison",
+          summary = FALSE,
+          rownames = FALSE,
+          header = FALSE,
           out = './tables/group_means_risk.tex')
 
 # Differences between risk perception dimensions for each sample ----------
 
-# Paired t-Test
+# Paired t-Test Risk Self vs Risk Others
 lapply(samples,
        function(sample) t.test(sample$risk_other, sample$risk_self,
                                paired = TRUE))
@@ -79,7 +80,7 @@ lapply(samples,
 lapply(samples,
        function(sample) round(sd(sample$risk_self), 3))
 
-# Risk Total ANOVA --------------------------------------------------------------
+# Risk Total ANOVA
 
 aovs_risk_total <- lapply(samples, 
                         function(sample) aov(risk_total ~ factor(treatment_doom) * factor(treatment_inevitable), 
@@ -87,16 +88,39 @@ aovs_risk_total <- lapply(samples,
                         )
 
 
-aovs_risk_total <-  lapply(aovs_risk_total,
-                           function(aov) Anova(aov, type='III'))
+aovs_risk_total_corrected <-  lapply(aovs_risk_total,
+                           function(aov) Anova(aov, type='II'))
 
-aovs_risk_total
+# Prepares correct row labels to ANOVA output
+lookup  <- c("factor(treatment_doom)" = "Doom",
+             "(Intercept)" = "(Intercept)",
+             "factor(treatment_inevitable)" = "Inevitable",
+             "factor(treatment_doom):factor(treatment_inevitable)" = "Doom $\\times$ Inevitable",
+             "Residuals" = "Residuals")
 
+
+aovs_risk_out <- map_df(aovs_risk_total_corrected, tidy) %>%
+        mutate_if(is.numeric, ~round(., 3)) %>%
+        rename("Sum Sq" = "sumsq", "$F$ Statistic" = "statistic", "p-value"="p.value") 
+
+aovs_risk_out$`p-value` <- as.character(aovs_risk_out$`p-value`)
+aovs_risk_out$`p-value` <- sub("^0+", "", aovs_risk_out$`p-value`) 
+aovs_risk_out$term <- as.character(lookup[aovs_risk_out$term])
+
+
+stargazer(aovs_risk_out, 
+          title = "ANOVA of Total Perceived Risk by Treatment Condition",
+          label = "tab:total_risk_anova_treatment",
+          object.names = TRUE,
+          rownames = FALSE,
+          notes = "Unequal group sizes adjusted using type 2 correction.",
+          header = FALSE,
+          summary = FALSE,
+          out = "./tables/anova-risk-type-II.tex")
 
 #ANOVA Assumptions 
 
 # Plots 
-names(aovs_risk_total)
 
 for (name in names(aovs_risk_total)) {
         file_name = paste("./figures/residual_plot_", name, ".tex", sep="")
@@ -109,8 +133,8 @@ for (name in names(aovs_risk_total)) {
         dev.off()
 }
 
-# MANOVA Risk for Self and Others -----------------------------------------
 
+# MANOVA Risk for Self and Others
 
 #fit the MANOVA model
 manova_model <- "cbind(risk_self, risk_other, risk_total) ~ treatment_doom * treatment_inevitable"
@@ -120,16 +144,96 @@ models <- lapply(samples,
 
 #view the results
 lapply(models, 
-       function(model) summary(model))
+       function(model) summary(model, ))
 
 lapply(models, 
-       function(model) summary.aov(model))
+       function(model) summary.aov(model, ))
+
+manova_type_II <- lapply(models,
+                   function(model) Anova(model, type='II'))
+
+lapply(manova_type_II, function(m) summary(m))
+# Directed t-Tests  Risks by Treatment Condition
+
+t_test_directed_total_risk <- lapply(samples,
+                                     function(sample) t.test(risk_total ~ treatment_doom, data = sample,
+                                                             alternative='less'))
+
+t_test_directed_self_risk <- lapply(samples,
+                                    function(sample) t.test(risk_self ~ treatment_doom, data = sample,
+                                                            alternative='less'))
+
+t_test_directed_other_risk <- lapply(samples,
+                                     function(sample) t.test(risk_other ~ treatment_doom, data = sample,
+                                                             alternative='less'))
+
+
+t_test_directed_total_risk
+t_test_directed_self_risk
+t_test_directed_other_risk
+
+# Risk Perception OLS -----------------------------------------------------
+
+risk_types <-  list("risk_self",
+                    "risk_other",
+                    "risk_total")
+
+rhs <- "~ factor(treatment_doom)*factor(treatment_inevitable) + quiz_score + as.double(education) + as.double(income) + gender + age"
+
+risk_fits_full_sample <- lapply(risk_types,
+                                function(type) lm(paste0(type, rhs), 
+                                                  data = full_sample))
+
+
+risk_fits_earth_day_sample <- lapply(risk_types,
+                                     function(type) lm(paste0(type, rhs),
+                                                       data = earth_day_sample))
+
+
+
+risk_fits_low_ocsi_sample <- lapply(risk_types,
+                                    function(type) lm(paste0(type, rhs),
+                                                      data = low_ocsi_sample))
+
+
+risk_perception_models <- list(risk_fits_full_sample, risk_fits_earth_day_sample, risk_fits_low_ocsi_sample) 
+
+
+stargazer(risk_perception_models,
+          title = "Analysis of Risk Perception Factors",
+          label = "tab:risk_perception_ols",
+          dep.var.caption = c("Perception of Risk for"),
+          dep.var.labels.include = FALSE,
+          add.lines = "Treatment Condition:",
+          column.labels = c("Self",
+                            "Other",
+                            "Total",
+                            "Self",
+                            "Other",
+                            "Total",
+                            "Self",
+                            "Other",
+                            "Total"),
+          covariate.labels = c("\\hspace{1em}Doom",
+                               "\\hspace{1em}Inevitable",
+                               "\\hspace{1em}Inevitable $\\times$ Doom",
+                               "OCSI Score",
+                               "Education",
+                               "Income",
+                               "Gender : Male",
+                               "Gender : Other",
+                               "Age"),
+          
+          align=TRUE, 
+          no.space=TRUE,
+          out.header = FALSE,
+          order = c(1,2,9,3,4,5,6,7,8),
+          out = './tables/risk-perceptions-ols.tex')
+
 
 
 
 # Lottery Donation --------------------------------------------------------
-
-# Descriptives by group
 
 # Tickets donated
 lottery_donation_means <- lapply(samples,
@@ -150,13 +254,71 @@ stargazer(lottery_donation_means,
           header=FALSE,
           out = './tables/group_means_lottery.tex')
 
+# ANOVA of Treatment Condidition
+
+aovs_lottery <- lapply(samples, 
+                       function(sample) aov(lottery_donation ~ factor(treatment_doom) * factor(treatment_inevitable), 
+                                            data = sample)
+)
+
+
+aovs_lottery <-  lapply(aovs_lottery,
+                        function(aov) Anova(aov, type='II'))
+
+aovs_lottery_out <- map_df(aovs_lottery, tidy) %>%
+        mutate_if(is.numeric, ~round(., 3)) %>%
+        rename("Sum Sq" = "sumsq", "$F$ Statistic" = "statistic", "p-value"="p.value")
+
+aovs_lottery_out$term <- as.character(lookup[aovs_lottery_out$term])
+aovs_lottery_out$`p-value` <- as.character(aovs_lottery_out$`p-value`)
+aovs_lottery_out$`p-value` <- sub("^0+", "", aovs_lottery_out$`p-value`) 
+aovs_lottery_out$term <- as.character(lookup[aovs_lottery_out$term])
+
+
+
+
+
+stargazer(aovs_lottery_out, 
+          title = "ANOVA of Donation Decision by Treatment Condition",
+          label = "tab:lottery_donation_anova_treatment",
+          notes = "Unequal group sizes adjusted using type 2 correction.",
+          object.names = TRUE,
+          rownames = FALSE,
+          header = FALSE,
+          summary = FALSE,
+          out='./tables/lottery-donation-anova-type-II.tex')
+
+# Plots 
+
+for (name in names(aovs_lottery)) {
+        file_name = paste("./figures/residual_plot_anova_lottery_", name, ".tex", sep="")
+        tikz(file = file_name,
+             width = 5,
+             height = 3)
+        par(mfrow=c(1,2)) # Change the panel layout to 2 x 2
+        plot(aovs_risk_total[[name]],1)
+        plot(aovs_risk_total[[name]], 2)
+        dev.off()
+}
+
+
+# Directed t Test for Treatment Condition of Lottery Donation
+t_test_directed_lottery_inevitable <- lapply(samples,
+                                             function(sample) t.test(lottery_donation ~ treatment_inevitable, data=sample,
+                                                                     alternative='greater'))
+t_test_directed_lottery_doom <- lapply(samples,
+                                       function(sample) t.test(lottery_donation ~ treatment_doom, data=sample,
+                                                               alternative='greater'))
+t_test_directed_lottery_inevitable
+t_test_directed_lottery_doom
+
 # OLS Analysis
 
 model_lottery_risk_total <- 'lottery_donation ~ risk_total + 
                                      trust + quiz_score + as.double(education) + 
                                      as.double(income) + gender + age'
 
-model_lottery_risk_types <- 'lottery_donation ~  + risk_self + risk_other +
+model_lottery_risk_types <- 'lottery_donation ~  risk_self + risk_other +
                                      trust + quiz_score + as.double(education) + 
                                      as.double(income) + gender + age'
 
@@ -196,63 +358,3 @@ stargazer(lottery_out,
           omit.stat = "ser",
           out.header = FALSE,
           out = './tables/lottery-donation-ols.tex')
-
-
-# Risk Perception OLS -----------------------------------------------------
-
-risk_types <-  list("risk_self",
-                    "risk_other",
-                    "risk_total")
-
-rhs <- "~ factor(treatment_doom)*factor(treatment_inevitable) + quiz_score + as.double(education) + as.double(income) + gender + age"
-
-risk_fits_full_sample <- lapply(risk_types,
-                                function(type) lm(paste0(type, rhs), 
-                                                  data = full_sample))
-
-
-risk_fits_earth_day_sample <- lapply(risk_types,
-                                     function(type) lm(paste0(type, rhs),
-                                                       data = earth_day_sample))
-
-
-
-risk_fits_low_ocsi_sample <- lapply(risk_types,
-                                function(type) lm(paste0(type, rhs),
-                                                  data = low_ocsi_sample))
-
-
-risk_perception_models <- list(risk_fits_full_sample, risk_fits_earth_day_sample, risk_fits_low_ocsi_sample) 
-
-
-stargazer(risk_perception_models,
-          title = "Analysis of Risk Perception Factors",
-          label = "tab:risk_perception_ols",
-          dep.var.caption = c("Perception of Risk for"),
-          dep.var.labels.include = FALSE,
-          add.lines = "Treatment Condition:",
-          column.labels = c("Self",
-                            "Other",
-                            "Total",
-                            "Self",
-                            "Other",
-                            "Total",
-                            "Self",
-                            "Other",
-                            "Total"),
-          covariate.labels = c("\\hspace{1em}Doom",
-                               "\\hspace{1em}Inevitable",
-                               "\\hspace{1em}Inevitable $\\times$ Doom",
-                               "OCSI Score",
-                               "Education",
-                               "Income",
-                               "Gender : Male",
-                               "Gender : Other",
-                               "Age"),
-          
-          align=TRUE, 
-          no.space=TRUE,
-          out.header = FALSE,
-          order = c(1,2,9,3,4,5,6,7,8),
-          out = './tables/risk-perceptions-ols.tex')
-
