@@ -12,7 +12,7 @@ graphing_data$risk_level <-factor(graphing_data$risk_level, labels = c("For Othe
 full_sample <- graphing_data
 earth_day_sample <- full_sample %>% filter(started < '2021-04-22')
 
-low_ocsi_sample <- full_sample %>% filter(quiz_score < 5)
+low_ocsi_sample <- full_sample %>% filter(ocsi_score < 5)
 
 samples = list(full_sample, earth_day_sample, low_ocsi_sample)
 names(samples) = c("full_sample", "earth_day", "ocsi")
@@ -78,9 +78,11 @@ for (name in names(risk_perception_boxplot)) {
 risk_perception_ocsi = list()
 
 for (name in names(samples)){
-    p = ggplot(samples[[name]], aes(x = quiz_score, y = risk_level_value)) +
-        geom_jitter(alpha=0.3, color='#b8d8dc') +
-        geom_smooth(method = 'lm', se = FALSE, color='#2c2962') +
+    p = ggplot(samples[[name]], aes(x = ocsi_score, y = risk_level_value)) +
+        geom_jitter(alpha=0.3, color='#b8d8dc', width=0.3) +
+        geom_smooth(method = 'lm', se=FALSE, color='#2c2962') +
+        stat_smooth(method = "lm", colour = '#38357e', geom = "ribbon", linetype=2, 
+                    show.legend=TRUE, fullrange = TRUE, fill = NA) +
         facet_wrap(~risk_level) +
         ylab("Perceived Risk Level") +
         xlab("OCSI Score") 
@@ -133,9 +135,9 @@ pd <- position_dodge(0.1) # move them .05 to the left and right
 full_sample <- data 
 earth_day_sample <- full_sample %>% filter(started < '2021-04-22')
 earth_day_sample
-quantile(full_sample$quiz_score)
+quantile(full_sample$ocsi_score)
 
-low_ocsi_sample <- full_sample %>% filter(quiz_score < 5)
+low_ocsi_sample <- full_sample %>% filter(ocsi_score < 5)
 
 samples <- list(full_sample, earth_day_sample, low_ocsi_sample)
 names(samples) <-  c("full_sample", "earth_day", "ocsi")
@@ -256,10 +258,3 @@ for (name in names(mean_plot_total_list)) {
     print(mean_plot_total_list[[name]])
     dev.off()
 }
-
-
-
-
-
-
-

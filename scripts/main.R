@@ -4,9 +4,8 @@
 #        Risk Perception, Taking Action and Trusting Others in the
 #        Face of Different Climate Change Scenarios
 
-#TODO: Organize directory and file paths
 getwd()
-setwd('../master-thesis/')
+setwd('../')
 script_path <- './scripts/'
 tables_path <- './tables/'
 figures_path <- './figures/'

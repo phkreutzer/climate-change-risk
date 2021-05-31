@@ -8,15 +8,15 @@ library(stargazer)
 full_sample <- data
 
 earth_day_sample <- full_sample %>% filter(started < '2021-04-22')
-low_ocsi_sample <- full_sample %>% filter(quiz_score < 5)
+low_ocsi_sample <- full_sample %>% filter(ocsi_score < 5)
 samples <- list(full_sample, earth_day_sample, low_ocsi_sample)
 
 
 # Descriptive Data  -------------------------------------------------------
 
-socio_full <- full_sample %>% select(c('age', 'quiz_score', 'treatment_group', 'gender', 'education', 'income'))
-socio_earth_day <- earth_day_sample %>% select(c('age', 'quiz_score', 'treatment_group', 'gender', 'education', 'income'))
-socio_low_ocsi <- low_ocsi_sample %>% select(c('age', 'quiz_score', 'treatment_group', 'gender', 'education', 'income'))
+socio_full <- full_sample %>% select(c('age', 'ocsi_score', 'treatment_group', 'gender', 'education', 'income'))
+socio_earth_day <- earth_day_sample %>% select(c('age', 'ocsi_score', 'treatment_group', 'gender', 'education', 'income'))
+socio_low_ocsi <- low_ocsi_sample %>% select(c('age', 'ocsi_score', 'treatment_group', 'gender', 'education', 'income'))
 
 #Gender 
 gender_full <- table(socio_full$gender)
