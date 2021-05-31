@@ -1,4 +1,4 @@
-#  This is the repository for my master thesis for the MSc in Innovation and Global Sustainable Development at Lund University 2021:
+#  This is the repository for my thesis in the Master of Science in Innovation and Global Sustainable Development at Lund University 2021:
 
 ## Would You Think We Are Doomed Because of Climate Change?
 
