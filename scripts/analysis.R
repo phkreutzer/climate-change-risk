@@ -270,17 +270,6 @@ for (name in names(aovs_lottery)) {
         dev.off()
 }
 
-
-# Directed t Test for Treatment Condition of Lottery Donation
-t_test_directed_lottery_inevitable <- lapply(samples,
-                                             function(sample) t.test(lottery_donation ~ treatment_inevitable, data=sample,
-                                                                     alternative='greater'))
-t_test_directed_lottery_doom <- lapply(samples,
-                                       function(sample) t.test(lottery_donation ~ treatment_doom, data=sample,
-                                                               alternative='greater'))
-t_test_directed_lottery_inevitable
-t_test_directed_lottery_doom
-
 # OLS Analysis
 
 model_lottery_risk_total <- 'lottery_donation ~ risk_total + 
